@@ -1,46 +1,42 @@
 import * as React from 'react';
-import {View, Text} from 'react-native';
 import {
   NavigationContainer,
   NavigationProp,
   useNavigation,
 } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
-import {Button} from '@react-navigation/elements';
+import HomeScreen from './screens/Home.screen';
+import FilesScreen from './screens/Files.screen';
+import {HeaderButton} from '@react-navigation/elements';
+import Icon from 'react-native-vector-icons/FontAwesome';
+import {TouchableOpacity} from 'react-native';
 
-type NavigationParamsList = {
+export type NavigationParamsList = {
   Home: undefined;
-  Details: undefined;
+  Files: undefined;
 };
-
-function HomeScreen() {
-  const navigation = useNavigation<NavigationProp<NavigationParamsList>>();
-
-  return (
-    <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-      <Text>Home Screen</Text>
-      <Button onPress={() => navigation.navigate('Details')}>
-        Go to Details
-      </Button>
-    </View>
-  );
-}
-
-function DetailsScreen() {
-  return (
-    <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-      <Text>Details Screen</Text>
-    </View>
-  );
-}
 
 const Stack = createNativeStackNavigator<NavigationParamsList>();
 
 function RootStack() {
+  const navigation = useNavigation<NavigationProp<NavigationParamsList>>();
+
   return (
     <Stack.Navigator initialRouteName="Home">
-      <Stack.Screen name="Home" component={HomeScreen} />
-      <Stack.Screen name="Details" component={DetailsScreen} />
+      <Stack.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{
+          headerRight: () => (
+            <TouchableOpacity>
+              <HeaderButton onPress={() => navigation.navigate('Files')}>
+                <Icon name="folder-open-o" size={24} />
+              </HeaderButton>
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      <Stack.Screen name="Files" component={FilesScreen} />
     </Stack.Navigator>
   );
 }

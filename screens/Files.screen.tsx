@@ -1,6 +1,13 @@
 import React, {useState, useEffect} from 'react';
-import {View, Text, FlatList, TouchableOpacity, StyleSheet} from 'react-native';
-import {request, PERMISSIONS, RESULTS} from 'react-native-permissions';
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  PermissionsAndroid,
+} from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
 
@@ -19,32 +26,75 @@ const FilesScreen = () => {
   );
 
   useEffect(() => {
-    requestPermissions();
+    requestPermissions().then(granted => {
+      if (granted) {
+        fetchRecordings();
+      }
+    });
+
     return () => {
       if (isPlaying) {
         audioRecorderPlayer.stopPlayer();
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const requestPermissions = async () => {
-    try {
-      const result = await request(PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE);
-      console.log({result});
-      if (result === RESULTS.GRANTED) {
-        fetchRecordings();
-      } else {
-        console.log('Permission denied');
+  const getRecordingDir = async () => {
+    if (Platform.OS === 'android') {
+      const dirPath = `${RNFS.ExternalDirectoryPath}/SoundRecorder`;
+      try {
+        const dirExists = await RNFS.exists(dirPath);
+        if (!dirExists) {
+          await RNFS.mkdir(dirPath);
+        }
+        return dirPath;
+      } catch (error) {
+        console.error('Error creating directory:', error);
+        return RNFS.ExternalDirectoryPath;
       }
-    } catch (error) {
-      console.error('Error requesting permissions:', error);
+    } else {
+      return RNFS.DocumentDirectoryPath;
     }
+  };
+
+  const requestPermissions = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const grants = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+        ]);
+
+        if (
+          grants['android.permission.WRITE_EXTERNAL_STORAGE'] ===
+            PermissionsAndroid.RESULTS.GRANTED &&
+          grants['android.permission.READ_EXTERNAL_STORAGE'] ===
+            PermissionsAndroid.RESULTS.GRANTED &&
+          grants['android.permission.RECORD_AUDIO'] ===
+            PermissionsAndroid.RESULTS.GRANTED
+        ) {
+          console.log('Permissions granted');
+          return true;
+        } else {
+          console.log('All required permissions not granted');
+          return false;
+        }
+      } catch (err) {
+        console.warn(err);
+        return false;
+      }
+    }
+    return true;
   };
 
   const fetchRecordings = async () => {
     try {
-      const files = await RNFS.readDir(RNFS.ExternalStorageDirectoryPath);
-      console.log({files, path: RNFS.ExternalStorageDirectoryPath});
+      const path = await getRecordingDir();
+      await RNFS.mkdir(path);
+      const files = await RNFS.readDir(path);
+      console.log({files, path: path});
       const audioFiles = files.filter(
         file =>
           file.name.endsWith('.mp3') ||

@@ -1,6 +1,6 @@
 import {useState, useEffect} from 'react';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
-import {PermissionsAndroid, Platform} from 'react-native';
+import {PermissionsAndroid, Platform, ToastAndroid} from 'react-native';
 import RNFS from 'react-native-fs';
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
@@ -34,10 +34,9 @@ export function useRecorder() {
           grants['android.permission.RECORD_AUDIO'] ===
             PermissionsAndroid.RESULTS.GRANTED
         ) {
-          console.log('Permissions granted');
           return true;
         } else {
-          console.log('All required permissions not granted');
+          console.error('All required permissions not granted');
           return false;
         }
       } catch (err) {
@@ -76,13 +75,14 @@ export function useRecorder() {
       }
 
       const path = await getRecordingPath();
-      const uri = await audioRecorderPlayer.startRecorder(path);
+      // const uri = await audioRecorderPlayer.startRecorder(path);
+      await audioRecorderPlayer.startRecorder(path);
       audioRecorderPlayer.addRecordBackListener(e => {
         setDuration(e.currentPosition / 1000);
       });
       setIsRecording(true);
       setDuration(0);
-      console.log('Recording started', uri);
+      // console.log('Recording started', uri);
     } catch (error) {
       console.error('Error starting recording:', error);
     }
@@ -94,7 +94,8 @@ export function useRecorder() {
       audioRecorderPlayer.removeRecordBackListener();
       setIsRecording(false);
       setRecordedUri(uri);
-      console.log('Recording stopped', uri);
+      setDuration(0);
+      ToastAndroid.show('Recording saved', ToastAndroid.SHORT);
     } catch (error) {
       console.error('Error stopping recording:', error);
     }
@@ -104,7 +105,7 @@ export function useRecorder() {
     if (recordedUri) {
       try {
         await audioRecorderPlayer.startPlayer(recordedUri);
-        console.log('Playing recorded audio');
+        // console.log('Playing recorded audio');
       } catch (error) {
         console.error('Error playing sound:', error);
       }

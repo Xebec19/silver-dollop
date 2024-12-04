@@ -3,14 +3,7 @@ import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {useRecorder} from '../hooks/useRecorder';
 
 export default function HomeScreen() {
-  const {
-    isRecording,
-    duration,
-    recordedUri,
-    startRecording,
-    stopRecording,
-    playSound,
-  } = useRecorder();
+  const {isRecording, duration, startRecording, stopRecording} = useRecorder();
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -32,11 +25,11 @@ export default function HomeScreen() {
         onPress={isRecording ? stopRecording : startRecording}>
         <Text style={styles.buttonText}>{isRecording ? 'Stop' : 'Start'}</Text>
       </TouchableOpacity>
-      {recordedUri && (
+      {/* {recordedUri && (
         <TouchableOpacity style={styles.playButton} onPress={playSound}>
           <Text style={styles.buttonText}>Play</Text>
         </TouchableOpacity>
-      )}
+      )} */}
     </View>
   );
 }

@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
+import Icon from 'react-native-vector-icons/FontAwesome';
 
 interface Recording {
   name: string;
   path: string;
+  timestamp: Date;
 }
 
 const audioRecorderPlayer = new AudioRecorderPlayer();
@@ -75,10 +77,10 @@ const FilesScreen = () => {
           grants['android.permission.RECORD_AUDIO'] ===
             PermissionsAndroid.RESULTS.GRANTED
         ) {
-          console.log('Permissions granted');
+          // console.log('Permissions granted');
           return true;
         } else {
-          console.log('All required permissions not granted');
+          // console.log('All required permissions not granted');
           return false;
         }
       } catch (err) {
@@ -94,7 +96,7 @@ const FilesScreen = () => {
       const path = await getRecordingDir();
       await RNFS.mkdir(path);
       const files = await RNFS.readDir(path);
-      console.log({files, path: path});
+      // console.log({files, path: path});
       const audioFiles = files.filter(
         file =>
           file.name.endsWith('.mp3') ||
@@ -102,7 +104,11 @@ const FilesScreen = () => {
           file.name.endsWith('.wav'),
       );
       setRecordings(
-        audioFiles.map(file => ({name: file.name, path: file.path})),
+        audioFiles.map(file => ({
+          name: file.name,
+          path: file.path,
+          timestamp: file.mtime || new Date(),
+        })),
       );
     } catch (error) {
       console.error('Error fetching recordings:', error);
@@ -155,18 +161,25 @@ const FilesScreen = () => {
       }>
       <Text>{item.name}</Text>
       {currentRecording?.path === item.path && (
-        <Text>{isPlaying ? 'Playing' : 'Paused'}</Text>
+        <>
+          {isPlaying ? (
+            <Icon name="pause" size={24} />
+          ) : (
+            <Icon name="play" size={24} />
+          )}
+        </>
       )}
     </TouchableOpacity>
   );
-
-  console.log({recordings});
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Recordings</Text>
       <FlatList
-        data={recordings}
+        data={recordings.sort(
+          (a, b) =>
+            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+        )}
         renderItem={renderItem}
         keyExtractor={item => item.path}
       />

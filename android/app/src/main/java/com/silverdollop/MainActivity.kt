@@ -15,6 +15,7 @@ class MainActivity : ReactActivity() {
   override fun getMainComponentName(): String = "silverdollop"
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    SplashScreen.show(this);
     super.onCreate(null)
   }
 

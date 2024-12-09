@@ -10,6 +10,7 @@ import FilesScreen from './screens/Files.screen';
 import {HeaderButton} from '@react-navigation/elements';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import {TouchableOpacity} from 'react-native';
+import SplashScreen from 'react-native-splash-screen';
 
 export type NavigationParamsList = {
   Home: undefined;
@@ -42,6 +43,10 @@ function RootStack() {
 }
 
 export default function App() {
+  React.useEffect(() => {
+    SplashScreen.hide();
+  }, []);
+
   return (
     <NavigationContainer>
       <RootStack />

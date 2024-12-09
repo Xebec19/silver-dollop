@@ -78,9 +78,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "in.co.rohankumarthakur.sound-recorder"
+    namespace "com.silverdollop"
     defaultConfig {
-        applicationId "in.co.rohankumarthakur.sound-recorder"
+        applicationId "com.silverdollop"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

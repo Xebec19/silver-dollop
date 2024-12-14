@@ -1,8 +1,8 @@
-import React from 'react';
+import React, {memo} from 'react';
 import {View, Text, TouchableOpacity, StyleSheet} from 'react-native';
 import {useRecorder} from '../hooks/useRecorder';
 
-export default function HomeScreen() {
+function HomeScreen() {
   const {isRecording, duration, startRecording, stopRecording} = useRecorder();
 
   const formatDuration = (seconds: number) => {
@@ -77,3 +77,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
+export default memo(HomeScreen);

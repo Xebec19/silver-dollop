@@ -1,16 +1,7 @@
-import React, {useState, useEffect} from 'react';
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  PermissionsAndroid,
-} from 'react-native';
+import React, {useState, useEffect, useCallback, memo} from 'react';
+import {Platform, PermissionsAndroid, View, Text, Button} from 'react-native';
 import AudioRecorderPlayer from 'react-native-audio-recorder-player';
 import RNFS from 'react-native-fs';
-import Icon from 'react-native-vector-icons/FontAwesome';
 
 interface Recording {
   name: string;
@@ -28,11 +19,14 @@ const FilesScreen = () => {
   );
 
   useEffect(() => {
-    requestPermissions().then(granted => {
+    const initialize = async () => {
+      const granted = await requestPermissions();
       if (granted) {
         fetchRecordings();
       }
-    });
+    };
+
+    initialize();
 
     return () => {
       if (isPlaying) {
@@ -40,9 +34,9 @@ const FilesScreen = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isPlaying]);
 
-  const getRecordingDir = async () => {
+  const getRecordingDir = useCallback(async () => {
     if (Platform.OS === 'android') {
       const dirPath = `${RNFS.ExternalDirectoryPath}/SoundRecorder`;
       try {
@@ -58,9 +52,9 @@ const FilesScreen = () => {
     } else {
       return RNFS.DocumentDirectoryPath;
     }
-  };
+  }, []);
 
-  const requestPermissions = async () => {
+  const requestPermissions = useCallback(async () => {
     if (Platform.OS === 'android') {
       try {
         const grants = await PermissionsAndroid.requestMultiple([
@@ -69,34 +63,26 @@ const FilesScreen = () => {
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
         ]);
 
-        if (
+        return (
           grants['android.permission.WRITE_EXTERNAL_STORAGE'] ===
             PermissionsAndroid.RESULTS.GRANTED &&
           grants['android.permission.READ_EXTERNAL_STORAGE'] ===
             PermissionsAndroid.RESULTS.GRANTED &&
           grants['android.permission.RECORD_AUDIO'] ===
             PermissionsAndroid.RESULTS.GRANTED
-        ) {
-          // console.log('Permissions granted');
-          return true;
-        } else {
-          // console.log('All required permissions not granted');
-          return false;
-        }
+        );
       } catch (err) {
         console.warn(err);
         return false;
       }
     }
     return true;
-  };
+  }, []);
 
-  const fetchRecordings = async () => {
+  const fetchRecordings = useCallback(async () => {
     try {
       const path = await getRecordingDir();
-      await RNFS.mkdir(path);
       const files = await RNFS.readDir(path);
-      // console.log({files, path: path});
       const audioFiles = files.filter(
         file =>
           file.name.endsWith('.mp3') ||
@@ -113,99 +99,48 @@ const FilesScreen = () => {
     } catch (error) {
       console.error('Error fetching recordings:', error);
     }
-  };
+  }, [getRecordingDir]);
 
-  const playRecording = async (recording: Recording) => {
-    try {
-      if (isPlaying) {
-        await audioRecorderPlayer.stopPlayer();
-        setIsPlaying(false);
+  const playRecording = useCallback(
+    async (recording: Recording) => {
+      try {
+        if (isPlaying) {
+          await audioRecorderPlayer.stopPlayer();
+          setIsPlaying(false);
+        }
+
+        if (currentRecording?.path !== recording.path) {
+          await audioRecorderPlayer.startPlayer(recording.path);
+          setIsPlaying(true);
+          setCurrentRecording(recording);
+
+          audioRecorderPlayer.addPlayBackListener(e => {
+            if (e.currentPosition === e.duration) {
+              audioRecorderPlayer.stopPlayer();
+              setIsPlaying(false);
+            }
+          });
+        } else {
+          await audioRecorderPlayer.resumePlayer();
+          setIsPlaying(true);
+        }
+      } catch (error) {
+        console.error('Error playing recording:', error);
       }
-
-      if (currentRecording?.path !== recording.path) {
-        await audioRecorderPlayer.startPlayer(recording.path);
-        setIsPlaying(true);
-        setCurrentRecording(recording);
-
-        audioRecorderPlayer.addPlayBackListener(e => {
-          if (e.currentPosition === e.duration) {
-            audioRecorderPlayer.stopPlayer();
-            setIsPlaying(false);
-          }
-        });
-      } else {
-        await audioRecorderPlayer.resumePlayer();
-        setIsPlaying(true);
-      }
-    } catch (error) {
-      console.error('Error playing recording:', error);
-    }
-  };
-
-  const pauseRecording = async () => {
-    try {
-      await audioRecorderPlayer.pausePlayer();
-      setIsPlaying(false);
-    } catch (error) {
-      console.error('Error pausing recording:', error);
-    }
-  };
-
-  const renderItem = ({item}: {item: Recording}) => (
-    <TouchableOpacity
-      style={styles.item}
-      onPress={() =>
-        isPlaying && currentRecording?.path === item.path
-          ? pauseRecording()
-          : playRecording(item)
-      }>
-      <Text>{item.name}</Text>
-      {currentRecording?.path === item.path && (
-        <>
-          {isPlaying ? (
-            <Icon name="pause" size={24} />
-          ) : (
-            <Icon name="play" size={24} />
-          )}
-        </>
-      )}
-    </TouchableOpacity>
+    },
+    [isPlaying, currentRecording],
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Recordings</Text>
-      <FlatList
-        data={recordings.sort(
-          (a, b) =>
-            new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-        )}
-        renderItem={renderItem}
-        keyExtractor={item => item.path}
-      />
+    <View>
+      {recordings.map(recording => (
+        <View key={recording.path}>
+          <Text>{recording.name}</Text>
+          <Button title="Play" onPress={() => playRecording(recording)} />
+        </View>
+      ))}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  item: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-});
-
-export default FilesScreen;
+export default memo(FilesScreen);
